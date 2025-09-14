@@ -37,5 +37,11 @@ export function proxyGoogleImage(source: string): string {
 
   if (typeof path === 'undefined') return '';
 
-  return `${get(instanceStore)}/ggpht${path}`;
+  // Remove credentials from URL for image proxy
+  let instanceUrl = new URL(`${get(instanceStore)}/`);
+  if (instanceUrl.username && instanceUrl.password) {
+    instanceUrl = new URL(instanceUrl.pathname + instanceUrl.search, instanceUrl.protocol + '//' + instanceUrl.host);
+  }
+
+  return `${instanceUrl}/ggpht${path}`;
 }

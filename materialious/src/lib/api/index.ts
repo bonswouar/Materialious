@@ -46,6 +46,33 @@ export function setRegion(url: URL): URL {
 	return url;
 }
 
+function encodeAsUTF8(str: string) {
+    const encoder = new TextEncoder();
+    const utf8 = encoder.encode(str);
+    var binaryString = '';
+    for (let b = 0; b < utf8.length; ++b) {
+        binaryString += String.fromCharCode(utf8[b]);
+    }
+
+    return binaryString;
+}
+
+export async function fetch(url: URL, fetchOptions: RequestInit = {}): Promise<Response> {
+	const username = url.username;
+	const password = url.password;
+	if (username && password) {
+		const headers = new Headers(fetchOptions?.headers);
+		if (!headers.has('Authorization')) {
+			headers.set('Authorization', 'Basic ' + btoa(encodeAsUTF8(decodeURI(username) + ":" + decodeURI(password))));
+		}
+		fetchOptions.headers = headers;
+		url = new URL(url.pathname + url.search, url.protocol + '//' + url.host);
+	}
+
+	return parent.fetch(url, fetchOptions);
+}
+
+
 export async function fetchErrorHandle(response: Response): Promise<Response> {
 	if (!response.ok) {
 		let message = 'Internal error';
@@ -79,7 +106,7 @@ export async function getPopular(fetchOptions?: RequestInit): Promise<Video[]> {
 }
 
 export async function getResolveUrl(url: string): Promise<ResolvedUrl> {
-	const resp = await fetchErrorHandle(await fetch(`${buildPath('resolveurl')}?url=${url}`));
+	const resp = await fetchErrorHandle(await fetch(new URL(`${buildPath('resolveurl')}?url=${url}`)));
 	return await resp.json();
 }
 
@@ -107,7 +134,7 @@ export async function getDislikes(
 	fetchOptions?: RequestInit
 ): Promise<ReturnYTDislikes> {
 	const resp = await fetchErrorHandle(
-		await fetch(`${get(returnYTDislikesInstanceStore)}/votes?videoId=${videoId}`, fetchOptions)
+		await fetch(new URL(`${get(returnYTDislikesInstanceStore)}/votes?videoId=${videoId}`), fetchOptions)
 	);
 	return await resp.json();
 }
@@ -166,7 +193,7 @@ export async function getChannelContent(
 
 	if (typeof parameters.sortBy !== 'undefined') url.searchParams.set('sort_by', parameters.sortBy);
 
-	const resp = await fetchErrorHandle(await fetch(url.toString(), fetchOptions));
+	const resp = await fetchErrorHandle(await fetch(new URL(url.toString()), fetchOptions));
 	return await resp.json();
 }
 
@@ -423,7 +450,7 @@ export async function removePlaylistVideo(
 
 export async function getDeArrow(videoId: string, fetchOptions?: RequestInit): Promise<DeArrow> {
 	const resp = await fetchErrorHandle(
-		await fetch(`${get(deArrowInstanceStore)}/api/branding?videoID=${videoId}`, fetchOptions)
+		await fetch(new URL(`${get(deArrowInstanceStore)}/api/branding?videoID=${videoId}`), fetchOptions)
 	);
 	return await resp.json();
 }
@@ -435,7 +462,7 @@ export async function getThumbnail(
 ): Promise<string> {
 	const resp = await fetchErrorHandle(
 		await fetch(
-			`${get(deArrowThumbnailInstanceStore)}/api/v1/getThumbnail?videoID=${videoId}&time=${time}`,
+			new URL(`${get(deArrowThumbnailInstanceStore)}/api/v1/getThumbnail?videoID=${videoId}&time=${time}`),
 			fetchOptions
 		)
 	);
@@ -452,7 +479,7 @@ export async function getVideoProgress(
 	fetchOptions: RequestInit = {}
 ): Promise<SynciousProgressModel[]> {
 	const resp = await fetchErrorHandle(
-		await fetch(`${get(synciousInstanceStore)}/video/${encodeURIComponent(videoId)}`, {
+		await fetch(new URL(`${get(synciousInstanceStore)}/video/${encodeURIComponent(videoId)}`), {
 			...buildApiExtendedAuthHeaders(),
 			...fetchOptions
 		})
@@ -470,7 +497,7 @@ export async function saveVideoProgress(
 	headers['headers']['Content-type'] = 'application/json';
 
 	await fetchErrorHandle(
-		await fetch(`${get(synciousInstanceStore)}/video/${encodeURIComponent(videoId)}`, {
+		await fetch(new URL(`${get(synciousInstanceStore)}/video/${encodeURIComponent(videoId)}`), {
 			...headers,
 			method: 'POST',
 			body: JSON.stringify({
@@ -483,7 +510,7 @@ export async function saveVideoProgress(
 
 export async function deleteVideoProgress(videoId: string, fetchOptions: RequestInit = {}) {
 	await fetchErrorHandle(
-		await fetch(`${get(synciousInstanceStore)}/video/${videoId}`, {
+		await fetch(new URL(`${get(synciousInstanceStore)}/video/${videoId}`), {
 			method: 'DELETE',
 			...buildApiExtendedAuthHeaders(),
 			...fetchOptions
@@ -493,7 +520,7 @@ export async function deleteVideoProgress(videoId: string, fetchOptions: Request
 
 export async function deleteAllVideoProgress(fetchOptions: RequestInit = {}) {
 	await fetchErrorHandle(
-		await fetch(`${get(synciousInstanceStore)}/videos`, {
+		await fetch(new URL(`${get(synciousInstanceStore)}/videos`), {
 			method: 'DELETE',
 			...buildApiExtendedAuthHeaders(),
 			...fetchOptions
